@@ -1,0 +1,126 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Greenhouse Temperature Dashboard</title>
+
+<!-- Chart.js CDN -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<style>
+    body {
+        background: #111;
+        color: #eee;
+        font-family: Arial, sans-serif;
+        margin: 0;
+        padding: 20px;
+    }
+
+    h1 {
+        text-align: center;
+        color: #66ccff;
+        margin-bottom: 30px;
+        font-weight: 300;
+    }
+
+    #chartContainer {
+        width: 95%;
+        max-width: 1000px;
+        margin: auto;
+    }
+
+    canvas {
+        background: #222;
+        border: 1px solid #333;
+        border-radius: 8px;
+        padding: 10px;
+    }
+</style>
+</head>
+
+<body>
+
+<h1>Greenhouse Temperature (°F)</h1>
+
+<div id="chartContainer">
+    <canvas id="tempChart"></canvas>
+</div>
+
+<script>
+const SHEET_ID = "1Cq0n801J4zRDa39HR0Df4P1ZRdrktZs9ons-NUoBv6k";
+const SHEET_GID = "0";  // Usually 0 unless you’re using a different tab
+
+const url = `https://docs.google.com/spreadsheets/d/${SHEET_ID}/gviz/tq?tqx=out:json&gid=${SHEET_GID}`;
+
+async function fetchSheetData() {
+    const response = await fetch(url);
+    const text = await response.text();
+
+    // Parse Google Sheets JSON
+    const json = JSON.parse(text.substr(47).slice(0, -2));
+    const rows = json.table.rows;
+
+    const timestamps = [];
+    const temps = [];
+
+    rows.forEach(r => {
+        const t = r.c[0]?.v; // timestamp
+        const f = r.c[2]?.v; // Temp_F is column #2 (Timestamp, Temp_C, Temp_F)
+
+        if (t && f) {
+            timestamps.push(new Date(t));
+            temps.push(f);
+        }
+    });
+
+    return { timestamps, temps };
+}
+
+async function drawChart() {
+    const data = await fetchSheetData();
+
+    const ctx = document.getElementById("tempChart").getContext("2d");
+
+    new Chart(ctx, {
+        type: "line",
+        data: {
+            labels: data.timestamps,
+            datasets: [{
+                label: "Temperature (°F)",
+                data: data.temps,
+                borderColor: "#66ccff",
+                backgroundColor: "rgba(102, 204, 255, 0.15)",
+                borderWidth: 2,
+                tension: 0.25,
+                pointRadius: 0
+            }]
+        },
+        options: {
+            responsive: true,
+            scales: {
+                x: {
+                    type: "time",
+                    time: { unit: "hour" },
+                    ticks: { color: "#ccc" },
+                    grid: { color: "#333" }
+                },
+                y: {
+                    ticks: { color: "#ccc" },
+                    grid: { color: "#333" }
+                }
+            },
+            plugins: {
+                legend: {
+                    labels: { color: "#eee" }
+                }
+            }
+        }
+    });
+}
+
+drawChart();
+</script>
+
+</body>
+</html>
